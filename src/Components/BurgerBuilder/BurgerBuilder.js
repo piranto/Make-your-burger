@@ -1,53 +1,92 @@
-import { type } from "@testing-library/user-event/dist/type";
 import React, { Component } from "react";
 import Burger from "./Burger/Burger";
 import Controls from "./Controls/Controls";
+import Summary from "./Summary/Summary";
+import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from "reactstrap";
+import { connect } from "react-redux";
+import { addIngredient, removeIngredient, updatePurchasable } from '../../Redux/actionCreators';
 
-const INGREDIENT_PRICES = {
-    salad: 10,
-    cheese: 30,
-    meat: 80,
+
+// this function call all the store from Redux(mane redux ar skl state annbe)
+const mapStateToProps = state => {
+    return {
+        ingredients: state.ingredients,  // age ja state a silo segulo akhon redux a asbe props hisebe.
+        totalPrice: state.totalPrice,    //same
+        purchasable: state.purchasable, //same
+    }
 }
 
-export default class BurgerBuilder extends Component {
+
+//this function use for dispatched the redux function
+const mapDispatchToProps = dispatch => {
+    return {
+        addIngredient: (igtype) => dispatch(addIngredient(igtype)),
+        removeIngredient: (igtype) => dispatch(removeIngredient(igtype)),
+        updatePurchasable: () => dispatch(updatePurchasable()),
+    }
+}
+
+
+
+class BurgerBuilder extends Component {
     state = {
-        ingredients: [
-            { type: 'salad', amount: 0 },
-            { type: 'cheese', amount: 0 },
-            { type: 'meat', amount: 0 }
-        ],
-        totalPrice: 20,
+
+        modalOpen: false,
     }
 
     addIngredientHandle = type => {
-        const ingredients = [...this.state.ingredients]
-        const newPrice = this.state.totalPrice + INGREDIENT_PRICES[type];
-        for (let item of ingredients) {
-            if (item.type === type) item.amount++;
-        }
-        this.setState({ ingredients: ingredients, totalPrice: newPrice });
+
+        this.props.addIngredient(type);
+        this.props.updatePurchasable();
     }
 
     removeIngrediendtHandle = type => {
-        const ingredients = [...this.state.ingredients]
-        const newPrice = this.state.totalPrice - INGREDIENT_PRICES[type];
-        for (let item of ingredients) {
-            if (item.type === type) {
-                if (item.amount <= 0) return;
-                item.amount--;
-            }
-        }
-        this.setState({ ingredients: ingredients, totalPrice: newPrice });
+        this.props.removeIngredient(type);
+        this.props.updatePurchasable();
     }
+
+    toggleModal = () => {
+        this.setState({
+            modalOpen: !this.state.modalOpen
+        })
+    } //this function use for Open modal
+
+    handleCheckout = () => {
+        this.props.history.push("/checkout")
+    }
+
+
+
     render() {
         return (
-            <div className="d-flex flex-md-row flex-column">
-                <Burger ingredients={this.state.ingredients} />
-                <Controls
-                    ingredientAdded={this.addIngredientHandle}
-                    ingredientRemoved={this.removeIngrediendtHandle}
-                    price={this.state.totalPrice} />
+            <div>
+                <div className="d-flex flex-md-row flex-column">
+                    <Burger ingredients={this.props.ingredients} />
+                    <Controls
+                        ingredientAdded={this.addIngredientHandle}
+                        ingredientRemoved={this.removeIngrediendtHandle}
+                        price={this.props.totalPrice}
+                        toggleModal={this.toggleModal}
+                        purchasable={this.props.purchasable} />
+
+                </div>
+                <Modal isOpen={this.state.modalOpen}>
+                    <ModalHeader>Your Order Summary</ModalHeader>
+                    <ModalBody>
+                        <h5>Total Price: {this.props.totalPrice.toFixed(0)} BDT</h5>
+                        <Summary ingredients={this.props.ingredients}></Summary>
+
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button style={{ backgroundColor: "#D70F64" }} onClick={this.handleCheckout}>Continue to  Checkout</Button>
+                        <Button color="secondary" onClick={this.toggleModal}>Cancel</Button>
+                    </ModalFooter>
+
+                </Modal>
             </div>
+
         )
     }
 }
+
+export default connect(mapStateToProps, mapDispatchToProps)(BurgerBuilder);
